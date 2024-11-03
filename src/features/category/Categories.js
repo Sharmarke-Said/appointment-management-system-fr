@@ -155,9 +155,7 @@ const Categories = () => {
                             <CTableHead>
                                 <CTableRow>
                                     <CTableHeaderCell>#</CTableHeaderCell>
-                                    <CTableHeaderCell>Category Name</CTableHeaderCell>
-                                    <CTableHeaderCell>Description</CTableHeaderCell>
-                                    <CTableHeaderCell>Color</CTableHeaderCell>
+                                    <CTableHeaderCell>Category</CTableHeaderCell>
                                     <CTableHeaderCell>Actions</CTableHeaderCell>
                                 </CTableRow>
                             </CTableHead>
@@ -165,10 +163,11 @@ const Categories = () => {
                                 {currentCategories.map((category, index) => (
                                     <CTableRow key={category._id}>
                                         <CTableDataCell>{index + 1}</CTableDataCell>
-                                        <CTableDataCell>{category.name}</CTableDataCell>
-                                        <CTableDataCell>{category.description}</CTableDataCell>
-                                        <CTableDataCell>
-                                            <span style={{ backgroundColor: category.color }}>{category.color}</span>
+                                        <CTableDataCell style={{ backgroundColor: category.color, color: '#fff', padding: '10px' }}>
+                                            <div>
+                                                <strong>{category.name}</strong>
+                                            </div>
+                                            <div>{category.description}</div>
                                         </CTableDataCell>
                                         <CTableDataCell>
                                             <CButton
@@ -214,32 +213,28 @@ const Categories = () => {
                         <CForm>
                             {/* Name Field */}
                             <div className="mb-3">
-                                <label htmlFor="categoryName">Name</label>
+                                <label htmlFor="categoryName" className="form-label">Category Name</label>
                                 <CFormInput
                                     id="categoryName"
-                                    placeholder="Enter category name"
                                     value={categoryName}
                                     onChange={(e) => setCategoryName(e.target.value)}
                                 />
                             </div>
-
                             {/* Description Field */}
                             <div className="mb-3">
-                                <label htmlFor="categoryDescription">Description</label>
+                                <label htmlFor="categoryDescription" className="form-label">Description</label>
                                 <CFormInput
                                     id="categoryDescription"
-                                    placeholder="Enter description"
                                     value={categoryDescription}
                                     onChange={(e) => setCategoryDescription(e.target.value)}
                                 />
                             </div>
-
-                            {/* Color Picker */}
+                            {/* Color Picker Field */}
                             <div className="mb-3">
-                                <label htmlFor="categoryColor">Color</label>
+                                <label htmlFor="categoryColor" className="form-label">Color</label>
                                 <CFormInput
-                                    id="categoryColor"
                                     type="color"
+                                    id="categoryColor"
                                     value={categoryColor}
                                     onChange={(e) => setCategoryColor(e.target.value)}
                                 />
@@ -248,25 +243,27 @@ const Categories = () => {
                     </CModalBody>
                     <CModalFooter>
                         <CButton color="primary" onClick={showEditModal ? handleEditCategory : handleAddCategory}>
-                            {showEditModal ? 'Update Category' : 'Add Category'}
+                            {showEditModal ? 'Update' : 'Add'} Category
                         </CButton>
-                        <CButton variant="outline" color="secondary" onClick={toggleAddModal}>
+                        <CButton color="secondary" onClick={() => { setShowAddModal(false); setShowEditModal(false); resetForm(); }}>
                             Cancel
                         </CButton>
                     </CModalFooter>
                 </CModal>
 
-                {/* Delete Confirmation Modal */}
+                {/* Delete Category Confirmation Modal */}
                 <CModal visible={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
                     <CModalHeader>
-                        <CModalTitle>Delete Category</CModalTitle>
+                        <CModalTitle>Delete Confirmation</CModalTitle>
                     </CModalHeader>
-                    <CModalBody>Are you sure you want to delete this category?</CModalBody>
+                    <CModalBody>
+                        Are you sure you want to delete this category?
+                    </CModalBody>
                     <CModalFooter>
                         <CButton color="danger" onClick={handleDeleteCategory}>
                             Delete
                         </CButton>
-                        <CButton color="secondary" onClick={toggleDeleteModal}>
+                        <CButton color="secondary" onClick={() => setShowDeleteModal(false)}>
                             Cancel
                         </CButton>
                     </CModalFooter>
@@ -277,4 +274,3 @@ const Categories = () => {
 };
 
 export default Categories;
-//=========
