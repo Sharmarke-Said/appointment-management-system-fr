@@ -23,6 +23,7 @@ import {
     CForm,
     CFormInput,
 } from '@coreui/react';
+
 import CIcon from '@coreui/icons-react';
 import { cilPencil, cilTrash, cilPlus } from '@coreui/icons';
 
@@ -36,14 +37,12 @@ const Categories = () => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
 
-    // State for new/edit category inputs
     const [categoryName, setCategoryName] = useState('');
     const [categoryDescription, setCategoryDescription] = useState('');
     const [categoryColor, setCategoryColor] = useState('#ffffff');
 
-    const categoriesPerPage = 5;
+    const categoriesPerPage = 10;
 
-    // Fetch categories from API
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -72,11 +71,11 @@ const Categories = () => {
     const handleSearch = (e) => setSearchTerm(e.target.value);
     const handlePageChange = (page) => setCurrentPage(page);
 
-    // Toggle modals
     const toggleAddModal = () => {
         setShowAddModal(!showAddModal);
         resetForm();
     };
+
     const toggleEditModal = (category) => {
         setSelectedCategory(category);
         if (category) {
@@ -86,37 +85,31 @@ const Categories = () => {
         }
         setShowEditModal(!showEditModal);
     };
+
     const toggleDeleteModal = (category) => {
         setSelectedCategory(category);
         setShowDeleteModal(!showDeleteModal);
     };
 
-    // Form reset
-    const resetForm = () => {
-        setCategoryName('');
-        setCategoryDescription('');
-        setCategoryColor('#ffffff');
-    };
-
-    // CRUD operations
     const handleAddCategory = async () => {
         try {
             const newCategory = { name: categoryName, description: categoryDescription, color: categoryColor };
             const response = await axios.post('http://localhost:5000/api/categories', newCategory);
-            setCategories([...categories, response.data.data]);
-            toggleAddModal();
+            setCategories((prevCategories) => [...prevCategories, response.data.data.category]);
+            resetForm();
+            setShowAddModal(false); // Close modal after adding
         } catch (error) {
             console.error('Error adding category:', error);
         }
     };
 
     const handleEditCategory = async () => {
-
         try {
             const updatedCategory = { name: categoryName, description: categoryDescription, color: categoryColor };
             const response = await axios.put(`http://localhost:5000/api/categories/${selectedCategory._id}`, updatedCategory);
-            setCategories(categories.map(cat => cat._id === selectedCategory._id ? response.data.data : cat));
-            toggleEditModal(null);
+            setCategories(categories.map(cat => cat._id === selectedCategory._id ? response.data.data.category : cat));
+            resetForm();
+            setShowEditModal(false); // Close modal after editing
         } catch (error) {
             console.error('Error updating category:', error);
         }
@@ -126,10 +119,17 @@ const Categories = () => {
         try {
             await axios.delete(`http://localhost:5000/api/categories/${selectedCategory._id}`);
             setCategories(categories.filter(cat => cat._id !== selectedCategory._id));
-            toggleDeleteModal(null);
+            setShowDeleteModal(false); // Close modal after deletion
         } catch (error) {
             console.error('Error deleting category:', error);
         }
+    };
+
+    const resetForm = () => {
+        setCategoryName('');
+        setCategoryDescription('');
+        setCategoryColor('#ffffff');
+        setSelectedCategory(null);
     };
 
     return (
@@ -206,61 +206,68 @@ const Categories = () => {
                 </CCard>
 
                 {/* Add/Edit Category Modal */}
-                <CModal visible={showAddModal || showEditModal} onClose={toggleAddModal}>
+                <CModal visible={showAddModal || showEditModal} onClose={() => { setShowAddModal(false); setShowEditModal(false); resetForm(); }}>
                     <CModalHeader>
                         <CModalTitle>{showEditModal ? 'Edit Category' : 'Add Category'}</CModalTitle>
-                        <CButton variant="outline" color="secondary" onClick={toggleAddModal}>
-                            Close
-                        </CButton>
                     </CModalHeader>
                     <CModalBody>
                         <CForm>
-                            <CFormInput
-                                label="Name"
-                                placeholder="Enter category name"
-                                className="mb-3"
-                                value={categoryName}
-                                onChange={(e) => setCategoryName(e.target.value)}
-                            />
-                            <CFormInput
-                                label="Description"
-                                placeholder="Enter description"
-                                className="mb-3"
-                                value={categoryDescription}
-                                onChange={(e) => setCategoryDescription(e.target.value)}
-                            />
-                            <CFormInput
-                                label="Color"
-                                type="color"
-                                className="mb-3"
-                                value={categoryColor}
-                                onChange={(e) => setCategoryColor(e.target.value)}
-                            />
+                            {/* Name Field */}
+                            <div className="mb-3">
+                                <label htmlFor="categoryName">Name</label>
+                                <CFormInput
+                                    id="categoryName"
+                                    placeholder="Enter category name"
+                                    value={categoryName}
+                                    onChange={(e) => setCategoryName(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Description Field */}
+                            <div className="mb-3">
+                                <label htmlFor="categoryDescription">Description</label>
+                                <CFormInput
+                                    id="categoryDescription"
+                                    placeholder="Enter description"
+                                    value={categoryDescription}
+                                    onChange={(e) => setCategoryDescription(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Color Picker */}
+                            <div className="mb-3">
+                                <label htmlFor="categoryColor">Color</label>
+                                <CFormInput
+                                    id="categoryColor"
+                                    type="color"
+                                    value={categoryColor}
+                                    onChange={(e) => setCategoryColor(e.target.value)}
+                                />
+                            </div>
                         </CForm>
                     </CModalBody>
                     <CModalFooter>
-                        <CButton color="secondary" onClick={toggleAddModal}>
-                            Close
-                        </CButton>
                         <CButton color="primary" onClick={showEditModal ? handleEditCategory : handleAddCategory}>
                             {showEditModal ? 'Update Category' : 'Add Category'}
+                        </CButton>
+                        <CButton variant="outline" color="secondary" onClick={toggleAddModal}>
+                            Cancel
                         </CButton>
                     </CModalFooter>
                 </CModal>
 
-                {/* Delete Category Modal */}
+                {/* Delete Confirmation Modal */}
                 <CModal visible={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
                     <CModalHeader>
                         <CModalTitle>Delete Category</CModalTitle>
-                        <CButton variant="outline" color="danger" onClick={() => setShowDeleteModal(false)} className="btn-close" aria-label="Close" />
                     </CModalHeader>
                     <CModalBody>Are you sure you want to delete this category?</CModalBody>
                     <CModalFooter>
-                        <CButton color="secondary" onClick={() => setShowDeleteModal(false)}>
-                            Cancel
-                        </CButton>
                         <CButton color="danger" onClick={handleDeleteCategory}>
                             Delete
+                        </CButton>
+                        <CButton color="secondary" onClick={toggleDeleteModal}>
+                            Cancel
                         </CButton>
                     </CModalFooter>
                 </CModal>
