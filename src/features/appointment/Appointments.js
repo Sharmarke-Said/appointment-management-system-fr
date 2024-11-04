@@ -1,90 +1,130 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import {
-  CTable,
-  CTableBody,
-  CTableDataCell,
-  CTableHead,
-  CTableHeaderCell,
-  CTableRow,
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CButton,
-  CCol,
-  CRow,
-  CPagination,
-  CPaginationItem,
-  CModal,
-  CModalBody,
-  CModalFooter,
-  CModalHeader,
-  CModalTitle,
-  CForm,
-  CFormInput,
-} from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilPencil, cilTrash, cilPlus } from '@coreui/icons'
+  CTable, CTableBody, CTableDataCell, CTableHead, CTableHeaderCell, CTableRow,
+  CCard, CCardBody, CCardHeader, CButton, CCol, CRow, CModal, CModalBody,
+  CModalFooter, CModalHeader, CModalTitle, CForm, CFormInput, CFormSelect,
+  CFormCheck
+} from '@coreui/react';
+import CIcon from '@coreui/icons-react';
+import { cilPencil, cilTrash, cilPlus } from '@coreui/icons';
 
-const Appointments = () => {
-  const [appointments, setAppointments] = useState([])
-  const [filteredAppointments, setFilteredAppointments] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState(null)
-  const appointmentsPerPage = 5
+const Appointments = ({ userId }) => {
+  const [appointments, setAppointments] = useState([]);
+  const [filteredAppointments, setFilteredAppointments] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [form, setForm] = useState({
+    title: '',
+    categoryId: '',
+    duration: 15,
+    availability: 'availableNow',
+    startDate: '',
+    endDate: '',
+    status: 'Pending',
+    userId
+  });
 
-  // Fetch appointments from API
   useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        const response = await axios.get('http://localhost:6000/api/appointments')
-        setAppointments(response.data.data.appointments)
-      } catch (error) {
-        console.error('Error fetching appointments:', error)
-      }
+    fetchAppointments();
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    setFilteredAppointments(
+      appointments.filter(appointment =>
+        appointment.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (appointment.categoryId.name && appointment.categoryId.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    );
+  }, [searchQuery, appointments]);
+
+  const fetchAppointments = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/appointments');
+      setAppointments(response.data);
+      setFilteredAppointments(response.data); // Initialize filtered appointments
+    } catch (error) {
+      console.error('Error fetching appointments:', error.response?.data || error.message);
     }
-    fetchAppointments()
-  }, [])
+  };
 
-  useEffect(() => {
-    const filtered = appointments.filter((appointment) =>
-      appointment.userId.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    setFilteredAppointments(filtered)
-  }, [searchTerm, appointments])
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get('http://localhost:5000/api/categories'); // Ensure the correct endpoint
+      setCategories(response.data.data.categories);
+    } catch (error) {
+      console.error('Error fetching categories:', error.response?.data || error.message);
+    }
+  };
 
-  const totalPages = Math.ceil(filteredAppointments.length / appointmentsPerPage)
-  const currentAppointments = filteredAppointments.slice(
-    (currentPage - 1) * appointmentsPerPage,
-    currentPage * appointmentsPerPage,
-  )
+  const toggleAddModal = () => {
+    setShowAddModal(!showAddModal);
+    resetForm();
+    setIsEdit(false);
+  };
 
-  const handleSearch = (e) => setSearchTerm(e.target.value)
-  const handlePageChange = (page) => setCurrentPage(page)
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+  };
 
-  const toggleAddModal = () => setShowAddModal(!showAddModal)
-  const toggleEditModal = (appointment) => {
-    setSelectedAppointment(appointment)
-    setShowEditModal(!showEditModal)
-  }
-  const toggleDeleteModal = (appointment) => {
-    setSelectedAppointment(appointment)
-    setShowDeleteModal(!showDeleteModal)
-  }
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
 
-  const handleAddAppointment = () => {
-    // Add logic here
-  }
-  const handleEditAppointment = () => {
-    // Edit logic here
-  }
-  const handleDeleteAppointment = () => {
-    // Delete logic here
-  }
+  const handleAddAppointment = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/appointments', form);
+      setAppointments([...appointments, response.data]);
+      toggleAddModal();
+    } catch (error) {
+      console.error('Error adding appointment:', error.response?.data || error.message);
+    }
+  };
+
+  const handleEditAppointment = (appointment) => {
+    setForm({ ...appointment });
+    setShowAddModal(true);
+    setIsEdit(true);
+  };
+
+  const handleUpdateAppointment = async () => {
+    try {
+      const response = await axios.put(`http://localhost:5000/api/appointments/${form._id}`, form);
+      const updatedAppointments = appointments.map(app =>
+        app._id === form._id ? response.data : app
+      );
+      setAppointments(updatedAppointments);
+      toggleAddModal();
+    } catch (error) {
+      console.error('Error updating appointment:', error.response?.data || error.message);
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/appointments/${appointmentId}`);
+      setAppointments(appointments.filter(app => app._id !== appointmentId));
+    } catch (error) {
+      console.error('Error deleting appointment:', error.response?.data || error.message);
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      title: '',
+      categoryId: '',
+      duration: 15,
+      availability: 'availableNow',
+      startDate: '',
+      endDate: '',
+      status: 'Pending',
+      userId
+    });
+  };
 
   return (
     <CRow>
@@ -92,52 +132,45 @@ const Appointments = () => {
         <CCard className="mb-4">
           <CCardHeader>
             <strong>Appointments</strong>
-            <CButton color="primary" onClick={toggleAddModal} className="float-end">
+            <CButton color="primary" onClick={toggleAddModal} className="float-end me-2">
               <CIcon icon={cilPlus} /> Add Appointment
             </CButton>
           </CCardHeader>
           <CCardBody>
-            <CForm className="mb-3">
-              <CFormInput
-                type="text"
-                placeholder="Search by name"
-                value={searchTerm}
-                onChange={handleSearch}
-              />
-            </CForm>
+            {/* Search Input */}
+            <CFormInput
+              type="text"
+              placeholder="Search by title or category..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="mb-3"
+            />
             <CTable hover responsive align="middle">
               <CTableHead>
                 <CTableRow>
                   <CTableHeaderCell>#</CTableHeaderCell>
-                  <CTableHeaderCell>Name</CTableHeaderCell>
-                  <CTableHeaderCell>Date</CTableHeaderCell>
-                  <CTableHeaderCell>Time</CTableHeaderCell>
+                  <CTableHeaderCell>Title</CTableHeaderCell>
+                  <CTableHeaderCell>Category</CTableHeaderCell>
+                  <CTableHeaderCell>Duration</CTableHeaderCell>
+                  <CTableHeaderCell>Availability</CTableHeaderCell>
                   <CTableHeaderCell>Status</CTableHeaderCell>
                   <CTableHeaderCell>Actions</CTableHeaderCell>
                 </CTableRow>
               </CTableHead>
               <CTableBody>
-                {currentAppointments.map((appointment, index) => (
+                {filteredAppointments.map((appointment, index) => (
                   <CTableRow key={appointment._id}>
                     <CTableDataCell>{index + 1}</CTableDataCell>
-                    <CTableDataCell>{appointment.userId.fullName}</CTableDataCell>
-                    <CTableDataCell>{appointment.date}</CTableDataCell>
-                    <CTableDataCell>{appointment.time}</CTableDataCell>
+                    <CTableDataCell>{appointment.title}</CTableDataCell>
                     <CTableDataCell>{appointment.categoryId.name}</CTableDataCell>
+                    <CTableDataCell>{appointment.duration} mins</CTableDataCell>
+                    <CTableDataCell>{appointment.availability}</CTableDataCell>
+                    <CTableDataCell>{appointment.status}</CTableDataCell>
                     <CTableDataCell>
-                      <CButton
-                        color="info"
-                        variant="outline"
-                        onClick={() => toggleEditModal(appointment)}
-                        className="me-2"
-                      >
+                      <CButton color="info" variant="outline" onClick={() => handleEditAppointment(appointment)} className="me-2">
                         <CIcon icon={cilPencil} />
                       </CButton>
-                      <CButton
-                        color="danger"
-                        variant="outline"
-                        onClick={() => toggleDeleteModal(appointment)}
-                      >
+                      <CButton color="danger" variant="outline" onClick={() => handleDeleteAppointment(appointment._id)}>
                         <CIcon icon={cilTrash} />
                       </CButton>
                     </CTableDataCell>
@@ -145,105 +178,108 @@ const Appointments = () => {
                 ))}
               </CTableBody>
             </CTable>
-            <CPagination align="center" className="mt-3">
-              {[...Array(totalPages).keys()].map((page) => (
-                <CPaginationItem
-                  key={page + 1}
-                  active={page + 1 === currentPage}
-                  onClick={() => handlePageChange(page + 1)}
-                >
-                  {page + 1}
-                </CPaginationItem>
-              ))}
-            </CPagination>
           </CCardBody>
         </CCard>
 
-        {/* Add Appointment Modal */}
         <CModal visible={showAddModal} onClose={toggleAddModal}>
           <CModalHeader>
-            <CModalTitle>Add Appointment</CModalTitle>
-            <CButton variant="close" onClick={toggleAddModal} />
+            <CModalTitle>{isEdit ? 'Edit' : 'Add'} Appointment</CModalTitle>
           </CModalHeader>
           <CModalBody>
             <CForm>
-              <CFormInput label="Name" placeholder="Enter full name" className="mb-3" />
-              <CFormInput label="Date" type="date" className="mb-3" />
-              <CFormInput label="Time" type="time" className="mb-3" />
-              <CFormInput label="Status" placeholder="Enter status" className="mb-3" />
+              <CFormInput
+                label="Title"
+                name="title"
+                value={form.title}
+                onChange={handleInputChange}
+                required
+                placeholder="Enter appointment title"
+              />
+              <CFormSelect
+                label="Category"
+                name="categoryId"
+                value={form.categoryId}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="">Select category</option>
+                {categories.map(cat => <option key={cat._id} value={cat._id}>{cat.name}</option>)}
+              </CFormSelect>
+              <CFormSelect
+                label="Duration"
+                name="duration"
+                value={form.duration}
+                onChange={handleInputChange}
+                required
+              >
+                <option value="15">15 minutes</option>
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120">2 hours</option>
+                <option value="custom">Custom Duration</option>
+              </CFormSelect>
+              {form.duration === 'custom' && (
+                <CFormInput
+                  label="Custom Duration (in minutes)"
+                  name="customDuration"
+                  type="number"
+                  onChange={handleInputChange}
+                  placeholder="Enter custom duration"
+                />
+              )}
+              <div className="mb-3">
+                <label className="form-label">Availability:</label>
+                <CFormCheck
+                  type="radio"
+                  id="availableNow"
+                  name="availability"
+                  value="availableNow"
+                  checked={form.availability === 'availableNow'}
+                  onChange={handleInputChange}
+                  label="Available Now"
+                />
+                <CFormCheck
+                  type="radio"
+                  id="dateRange"
+                  name="availability"
+                  value="dateRange"
+                  checked={form.availability === 'dateRange'}
+                  onChange={handleInputChange}
+                  label="Date Range"
+                />
+              </div>
+              {form.availability === 'dateRange' && (
+                <>
+                  <CFormInput
+                    type="date"
+                    label="Start Date"
+                    name="startDate"
+                    value={form.startDate}
+                    onChange={handleInputChange}
+                  />
+                  <CFormInput
+                    type="date"
+                    label="End Date"
+                    name="endDate"
+                    value={form.endDate}
+                    onChange={handleInputChange}
+                  />
+                </>
+              )}
             </CForm>
           </CModalBody>
           <CModalFooter>
             <CButton color="secondary" onClick={toggleAddModal}>
-              Close
-            </CButton>
-            <CButton color="primary" onClick={handleAddAppointment}>
-              Add Appointment
-            </CButton>
-          </CModalFooter>
-        </CModal>
-
-        {/* Edit Appointment Modal */}
-        <CModal visible={showEditModal} onClose={() => setShowEditModal(false)}>
-          <CModalHeader>
-            <CModalTitle>Edit Appointment</CModalTitle>
-            <CButton variant="close" onClick={() => setShowEditModal(false)} />
-          </CModalHeader>
-          <CModalBody>
-            <CForm>
-              <CFormInput
-                label="Name"
-                defaultValue={selectedAppointment?.userId.fullName}
-                className="mb-3"
-              />
-              <CFormInput
-                label="Date"
-                type="date"
-                defaultValue={selectedAppointment?.date}
-                className="mb-3"
-              />
-              <CFormInput
-                label="Time"
-                type="time"
-                defaultValue={selectedAppointment?.time}
-                className="mb-3"
-              />
-              <CFormInput
-                label="Status"
-                defaultValue={selectedAppointment?.categoryId.name}
-                className="mb-3"
-              />
-            </CForm>
-          </CModalBody>
-          <CModalFooter>
-            <CButton color="secondary" onClick={() => setShowEditModal(false)}>
-              Close
-            </CButton>
-            <CButton color="primary" onClick={handleEditAppointment}>
-              Update Appointment
-            </CButton>
-          </CModalFooter>
-        </CModal>
-
-        {/* Delete Appointment Modal */}
-        <CModal visible={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
-          <CModalHeader>
-            <CModalTitle>Delete Appointment</CModalTitle>
-            <CButton variant="close" onClick={() => setShowDeleteModal(false)} />
-          </CModalHeader>
-          <CModalBody>Are you sure you want to delete this appointment?</CModalBody>
-          <CModalFooter>
-            <CButton color="secondary" onClick={() => setShowDeleteModal(false)}>
               Cancel
             </CButton>
-            <CButton color="danger" onClick={handleDeleteAppointment}>
-              Delete
+            <CButton color="primary" onClick={isEdit ? handleUpdateAppointment : handleAddAppointment}>
+              {isEdit ? 'Update' : 'Add'} Appointment
             </CButton>
           </CModalFooter>
         </CModal>
       </CCol>
     </CRow>
-  )
-}
+  );
+};
 
-export default Appointments
+export default Appointments;
